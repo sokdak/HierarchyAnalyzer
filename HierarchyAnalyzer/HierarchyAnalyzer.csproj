@@ -6,10 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Module\" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Remove="ReferenceTuple.cs" />
+    <Compile Remove="Module\IO.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove=".DS_Store" />

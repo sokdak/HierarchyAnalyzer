@@ -11,18 +11,20 @@ namespace HierarchyAnalyzer
             string resSavePath = "/Users/sokdak/Desktop/res.txt";
 
             string[] args_t = { "sktnugu.com" };
-            string[] functionNames = ICSExtract.GetURLContainingFunctions(args_t, baseDir);
+
+            Analyzer icse = new Analyzer(baseDir, 5);
+
+            string[] functionNames = icse.GetURLContainingFunctions(args_t);
 
             using (StreamWriter sw = new StreamWriter(resSavePath, false))
             {
-                foreach (string funcName in functionNames)
-                {
-                    string[] res = ICSExtract.GetURL(baseDir, funcName);
+                sw.WriteLine("> batch started for {0}", baseDir);
 
-                    foreach (string b in res)
-                        sw.WriteLine(b);
-                }
+                var res = icse.GetURI(args_t);
 
+                foreach (var line in res)
+                    sw.WriteLine(line);
+                
                 sw.WriteLine(">> batch finished");
             }
 
