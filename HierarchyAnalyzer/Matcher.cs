@@ -30,6 +30,13 @@ namespace HierarchyAnalyzer
             else return false;
         }
 
+        internal static bool IsURIMetadataDeclarationLine(string line)
+        {
+            return (line.Replace(" ", "").StartsWith("@") &&
+                    line.Replace(" ", "").EndsWith("\")") &&
+                    line.Count(x => x.ToString() == "\"") == 2) ? true : false;
+        }
+
         internal static bool IsJavaMethodUsageLine(string line, string targetContains)
         {
             if (line.Contains("Method not decompiled"))
@@ -52,9 +59,7 @@ namespace HierarchyAnalyzer
 
                 while (tdata != null)
                 {
-                    if (tdata.Replace(" ", "").StartsWith("@") &&
-                        tdata.Replace(" ", "").EndsWith("\")") &&
-                        tdata.Count(x => x.ToString() == "\"") == 2)
+                    if (IsURIMetadataDeclarationLine(tdata))
                     {
                         matchedString.Add(tdata.Trim());
                         matchedString.Add(sr.ReadLine().Trim());
@@ -66,10 +71,10 @@ namespace HierarchyAnalyzer
             }
 
             if (matchedString.Count > 0)
-                Console.WriteLine("{2}[!] {1} lines of matched found at: {0}",
+                Console.WriteLine("{2}[i] {1} lines of matched found at: {0}",
                                    file, matchedString.Count,
                                    curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
-            else Console.WriteLine("{1}[!] no lines matched at: {0}",
+            else Console.WriteLine("{1}[i] no lines matched at: {0}",
                                    file,
                                    curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
 
@@ -89,10 +94,8 @@ namespace HierarchyAnalyzer
 
                 while (tdata != null)
                 {
-                    tdata = tdata.Trim();
-
-                    if (tdata.StartsWith("this.") &&
-                        tdata.EndsWith(".class);"))
+                    if (tdata.Replace(" ", "").StartsWith("this.") &&
+                        tdata.Replace(" ", "").EndsWith(".class);"))
                     {
                         string ddata = tdata.Split('(').Last();
                         interfaceString = ddata.Split(')').First().Split(".class").First();
