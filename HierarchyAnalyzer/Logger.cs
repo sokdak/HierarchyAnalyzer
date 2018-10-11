@@ -42,7 +42,7 @@ namespace HierarchyAnalyzer
 
         private void LogToFile(string str)
         {
-            IO.writeToFile(str, DefaultWritePath, AlreadyWrittenOnce);
+            IO.WriteToFile(str, DefaultWritePath, AlreadyWrittenOnce);
 
             AlreadyWrittenOnce = true;
         }
@@ -50,6 +50,11 @@ namespace HierarchyAnalyzer
         internal void Debug(string dbgString, params string[] paramStrings)
         {
             Console.WriteLine(dbgString, paramStrings);
+        }
+
+        internal void Error(string errString, params string[] paramStrings)
+        {
+            Console.WriteLine();
         }
     }
 }

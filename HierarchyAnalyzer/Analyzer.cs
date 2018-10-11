@@ -22,23 +22,24 @@ namespace HierarchyAnalyzer
         {
             List<string> foundURLs = new List<string>();
 
-            string[] functionNames = this.GetURLContainingFunctions(relatedURL);
+            var functionNames = GetURLContainingFunctions(relatedURL);
 
-            foreach (string funcName in functionNames)
+            foreach (var funcName in functionNames)
             {
-                Console.WriteLine("[i] Finding function {0} usage", funcName);
+                Console.WriteLine("[i] Finding function {0} usage", funcName.Item1);
 
-                foundURLs.Add(string.Format(" - function call-hierarchy analysis on {0}", funcName));
-                foundURLs.AddRange(CallHierarchySearch(BaseDir, funcName));
+                foundURLs.Add(string.Format(" - function call-hierarchy analysis on {0}, url: {1}",
+                                            funcName.Item1, funcName.Item2));
+                foundURLs.AddRange(CallHierarchySearch(BaseDir, funcName.Item1));
                 foundURLs.Add(string.Format(" - finished to analyze on {0}", funcName));
             }
 
             return foundURLs.ToArray();
         }
 
-        public string[] GetURLContainingFunctions(string[] urls, int curDepth=-1)
+        public Tuple<string, string>[] GetURLContainingFunctions(string[] urls, int curDepth=-1)
         {
-            List<string> functionNames = new List<string>();
+            var functionNames = new List<Tuple<string, string>>();
 
             foreach (string url in urls)
             {
@@ -48,7 +49,7 @@ namespace HierarchyAnalyzer
                 {
                     foreach (string rFilename in rFilenames)
                     {
-                        string[] funcNames = Analyzer.FindUsageOnSingleFile(rFilename, url, curDepth);
+                        var funcNames = Analyzer.FindUsageOnSingleFile(rFilename, url, curDepth);
 
                         if (funcNames.Length > 0)
                             functionNames.AddRange(funcNames);
@@ -76,6 +77,12 @@ namespace HierarchyAnalyzer
 
             var usages = Analyzer.FindUsages(currentDir, curFuncName, classNames, curDepth);
 
+            Console.WriteLine("{0}[i:({1})] Found {2} of usages at method {3}",
+                              curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "",
+                              stackedFunc,
+                              usages != null ? usages.Count() : 0,
+                              curFuncName);
+
             if (usages == null)
                 return foundURLs.ToArray();
             
@@ -89,10 +96,23 @@ namespace HierarchyAnalyzer
 
                     foreach (string file in files)
                     {
-                        Console.WriteLine("{1}[!:({2})] found interface at depth {0}",
+                        Console.WriteLine("{1}[!:({2})] found {3} at depth {0}",
                                           curDepth, Logger.AddDepthToPrint(curDepth),
-                                          stackedFunc);
-                        foundURLs.AddRange(Matcher.DoMatchesFromFile(file, curDepth));
+                                          stackedFunc,
+                                          ifName);
+
+                        foundURLs.Add(string.Format("  - Found interface: {0}",
+                                                    file));
+
+                        var res1 = Matcher.DoMatchesFromFile(file, curDepth);
+
+                        foreach (var res in res1)
+                        {
+                            foundURLs.Add(string.Format("{3}\t{0}\t{1}\t{2}",
+                                                        res.Item1, res.Item2, res.Item3,
+                                                        ifName.Replace("interface ", "")));
+                        }
+
                         break;
                     }
                 }
@@ -114,32 +134,33 @@ namespace HierarchyAnalyzer
             return foundURLs.ToArray();
         }
 
-        private static string[] FindUsageOnSingleFile(string cFile, string targetContains, int curDepth=-1)
+        private static Tuple<string, string>[] FindUsageOnSingleFile(string cFile, string targetContains, int curDepth=-1)
         {
-            List<string> retFunctions = new List<string>();
-            List<int> foundLines = new List<int>();
+            var retFunctions = new List<Tuple<string, string>>(); // func, url
+            var foundLines = new List<int>();
+            var foundUrls = new List<string>();
 
             string[] cData = File.ReadAllLines(cFile);
 
-            for (int j = 0; j < cData.Length; j++)
+            string urlTmp = "";
+
+            for (int i = 0; i < cData.Length; i++)
             {
-                int foundTarget = -1;
-
-                for (int i = 0; i < cData.Length; i++)
+                if (cData[i].Contains(targetContains) &&
+                    !foundLines.Exists(x => x == i))
                 {
-                    if (cData[i].Contains(targetContains) &&
-                        !foundLines.Exists(x => x.Equals(i)))
-                    {
-                        foundLines.Add(i);
-                        foundTarget = i;
+                    urlTmp = Parser.ExtractURL(cData[i]);
 
-                        break;
-                    }
+                    foundUrls.Add(urlTmp);
+                    foundLines.Add(i);
                 }
+            }
 
-                if (foundTarget != -1)
+            if (foundLines.Any())
+            {
+                for (int j = 0; j < foundLines.Count(); j++)
                 {
-                    for (int i = foundTarget; i > 0; i--) // find function's header
+                    for (int i = foundLines[j]; i > 0; i--) // find function's header
                     {
                         string tData = cData[i].Trim();
 
@@ -147,18 +168,42 @@ namespace HierarchyAnalyzer
                         {
                             string funcName = Parser.ExtractJavaMethodNameFromDeclarationLine(tData);
 
-                            if (funcName != null && !retFunctions.Exists(x => x == funcName))
+                            if (funcName != null)
                             {
                                 Console.WriteLine("{2}[i] found function {0} on {1}", funcName, cFile,
                                                   curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
-                                retFunctions.Add(funcName);
+
+                                retFunctions.Add(new Tuple<string, string>(funcName, foundUrls[j]));
+                                break;
                             }
                         }
                     }
                 }
             }
 
-            return retFunctions.Distinct().ToArray();
+            // url distinct
+            Tuple<string, string> tmp = null;
+            var ntmp = new List<Tuple<string, string>>();
+
+            foreach (var a in retFunctions)
+            {
+                if (tmp == null)
+                {
+                    tmp = a;
+                    ntmp.Add(a);
+
+                    continue;
+                }
+                else
+                {
+                    if (tmp.Item1 != a.Item1)
+                        ntmp.Add(a);
+                }
+
+                tmp = a;
+            }
+
+            return ntmp.ToArray();
         }
 
         private static Tuple<string, string, string[]>[] FindUsages(string baseDir, string targetContains, string[] classNames=null, int curDepth=-1)
@@ -200,9 +245,9 @@ namespace HierarchyAnalyzer
                                 if (count > 0)
                                 {
                                     fline_found = true;
-                                    Console.WriteLine("{3}[d] found function usage with classnames at line {0}, name: {1}, file: {2}",
-                                                      i + 1, targetContains, file,
-                                                      curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
+                                    //Console.WriteLine("{3}[d] found function usage with classnames at line {0}, name: {1}, file: {2}",
+                                    //                  i + 1, targetContains, file,
+                                    //                  curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
                                 }
                             }
                         }
@@ -210,9 +255,9 @@ namespace HierarchyAnalyzer
                         {
                             if (fline_found = Matcher.IsJavaMethodUsageLine(lines[i], targetContains))
                             {
-                                Console.WriteLine("{3}[d] found function usage at line {0}, name: {1}, file: {2}",
-                                                  i + 1, targetContains, file,
-                                                  curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
+                                //Console.WriteLine("{3}[d] found function usage at line {0}, name: {1}, file: {2}",
+                                //                  i + 1, targetContains, file,
+                                //                  curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
                             }
                         }
                     }
@@ -228,9 +273,9 @@ namespace HierarchyAnalyzer
 
                                     if (funcName != null)
                                     {
-                                        Console.WriteLine("{3}[d] found method definition at line {0}, name: {1}, file: {2}",
-                                                          j + 1, funcName, file,
-                                                          curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
+                                        //Console.WriteLine("{3}[d] found method definition at line {0}, name: {1}, file: {2}",
+                                        //                  j + 1, funcName, file,
+                                        //                  curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
 
                                         methodName = funcName;
                                     }
@@ -262,9 +307,9 @@ namespace HierarchyAnalyzer
 
                                     if (className != null)
                                     {
-                                        Console.WriteLine("{3}[d] found class definition at line {0}, name: {1}, file: {2}",
-                                                          j + 1, className, file,
-                                                          curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
+                                        //Console.WriteLine("{3}[d] found class definition at line {0}, name: {1}, file: {2}",
+                                        //                  j + 1, className, file,
+                                        //                  curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
 
                                         class_found = true;
 

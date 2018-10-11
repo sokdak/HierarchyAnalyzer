@@ -8,7 +8,7 @@ namespace HierarchyAnalyzer
     {
         private const string TAG = "IO";
 
-        internal static bool writeToFile(string str, string path, bool append)
+        internal static bool WriteToFile(string str, string path, bool append)
         {
             bool error = false;
 
@@ -21,6 +21,7 @@ namespace HierarchyAnalyzer
             }
             catch (Exception e)
             {
+                Logger.GetInstance.Error("Exception: {0}, Trace: {1}", e.Message, e.StackTrace);
                 error = true;
             }
 

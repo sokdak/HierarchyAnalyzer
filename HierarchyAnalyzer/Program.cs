@@ -14,8 +14,6 @@ namespace HierarchyAnalyzer
 
             Analyzer icse = new Analyzer(baseDir, 5);
 
-            string[] functionNames = icse.GetURLContainingFunctions(args_t);
-
             using (StreamWriter sw = new StreamWriter(resSavePath, false))
             {
                 sw.WriteLine("> batch started for {0}", baseDir);
