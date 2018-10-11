@@ -81,7 +81,7 @@ namespace HierarchyAnalyzer
             return matchedString.ToArray();
         }
 
-        internal static string FindInterfaceNameOnFile(string file)
+        internal static string FindInterfaceNameOnFile(string file, int curDepth=-1)
         {
             string retStr = null;
 
@@ -100,8 +100,9 @@ namespace HierarchyAnalyzer
                         string ddata = tdata.Split('(').Last();
                         interfaceString = ddata.Split(')').First().Split(".class").First();
 
-                        //Console.WriteLine("  [i] found interface(name: {0}) at line {1}",
-                        //                  interfaceString, line);
+                        Console.WriteLine("{2}[i] found interface(name: {0}) at line {1}",
+                                          interfaceString, line,
+                                          curDepth > 0 ? Logger.AddDepthToPrint(curDepth) : "");
 
                         retStr = "interface " + interfaceString;
                         break;

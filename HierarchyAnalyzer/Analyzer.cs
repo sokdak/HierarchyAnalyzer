@@ -81,7 +81,7 @@ namespace HierarchyAnalyzer
             
             foreach (var usage in usages)
             {
-                string ifName = Matcher.FindInterfaceNameOnFile(usage.Item1);
+                string ifName = Matcher.FindInterfaceNameOnFile(usage.Item1, curDepth);
 
                 if (ifName != null)
                 {
