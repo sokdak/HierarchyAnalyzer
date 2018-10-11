@@ -287,10 +287,13 @@ namespace HierarchyAnalyzer
 
         private static bool IsJavaMethodUsageLine(string line, string targetContains)
         {
-            return (line.Contains("." + targetContains + "(")
-                    &&
-                    !(line.Replace(" ", "").StartsWith("private") ||
-                      line.Replace(" ", "").StartsWith("public"))) ? true : false;
+            if (line.Contains("Method not decompiled"))
+                return false;
+            else
+                return (line.Contains("." + targetContains + "(")
+                        &&
+                        !(line.Replace(" ", "").StartsWith("private") ||
+                          line.Replace(" ", "").StartsWith("public"))) ? true : false;
         }
 
         /// <summary>
